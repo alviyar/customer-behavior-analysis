@@ -1,1 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Behavior Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --cream: #faf8f4;
+    --white: #ffffff;
+    --rose: #f4a7b0;
+    --rose-light: #fde8eb;
+    --rose-deep: #e8798a;
+    --sage: #a8c5a0;
+    --sage-light: #e8f4e5;
+    --sky: #a8c8e8;
+    --sky-light: #e2eff9;
+    --peach: #f5c9a0;
+    --peach-light: #fdf0e2;
+    --lavender: #c4b5e8;
+    --lavender-light: #ede8fb;
+    --text: #2d2a35;
+    --text-mid: #6b6778;
+    --text-soft: #a09cac;
+    --border: rgba(45,42,53,0.08);
+    --shadow-soft: 0 4px 24px rgba(45,42,53,0.07);
+    --shadow-card: 0 8px 40px rgba(45,42,53,0.1);
+  }
 
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--cream);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow-x: hidden;
+  }
+
+  .blob-wrap {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+  }
+  .blob {
+    position: absolute; border-radius: 50%;
+    filter: blur(80px); opacity: 0.42;
+    animation: bfloat 18s ease-in-out infinite;
+  }
+  .blob-1 { width:500px;height:500px;background:var(--rose);top:-100px;right:-100px;animation-duration:20s; }
+  .blob-2 { width:400px;height:400px;background:var(--sky);bottom:10%;left:-80px;animation-duration:16s;animation-delay:-5s; }
+  .blob-3 { width:350px;height:350px;background:var(--sage);top:40%;right:5%;animation-duration:22s;animation-delay:-10s; }
+  .blob-4 { width:280px;height:280px;background:var(--peach);bottom:-60px;right:30%;animation-duration:14s;animation-delay:-3s; }
+  .blob-5 { width:240px;height:240px;background:var(--lavender);top:20%;left:20%;animation-duration:18s;animation-delay:-8s; }
+
+  @keyframes bfloat {
+    0%,100% { transform:translate(0,0) scale(1); }
+    33% { transform:translate(30px,-40px) scale(1.05); }
+    66% { transform:translate(-20px,20px) scale(0.97); }
+  }
+
+  .wrap { position:relative; z-index:1; }
+
+  /* NAV */
+  nav {
+    position:fixed;top:0;left:0;right:0;z-index:100;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1.25rem 3.5rem;
+    background:rgba(250,248,244,0.82);
+    backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);
+    transition:box-shadow 0.3s;
+  }
+  nav.scrolled { box-shadow:var(--shadow-soft); }
+  .nav-logo {
+    font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;
+    color:var(--text);text-decoration:none;
+  }
+  .nav-logo span { color:var(--rose-deep); }
+  .nav-links { display:flex;gap:2.5rem; }
+  .nav-links a {
+    font-size:0.78rem;font-weight:500;color:var(--text-mid);
+    text-decoration:none;letter-spacing:0.02em;transition:color 0.2s;
+    position:relative;
+  }
+  .nav-links a::after {
+    content:'';position:absolute;bottom:-3px;left:0;right:0;
+    height:1.5px;background:var(--rose-deep);
+    transform:scaleX(0);transition:transform 0.25s ease;
+  }
+  .nav-links a:hover { color:var(--text); }
+  .nav-links a:hover::after { transform:scaleX(1); }
+  .nav-cta {
+    background:var(--text);color:var(--white);padding:0.55rem 1.4rem;
+    border-radius:100px;font-size:0.78rem;font-weight:500;
+    text-decoration:none;transition:all 0.25s;
+    display:inline-flex;align-items:center;gap:0.4rem;
+  }
+  .nav-cta:hover { background:var(--rose-deep);transform:translateY(-1px);box-shadow:0 6px 20px rgba(232,121,138,0.35); }
+
+  /* HERO */
+  .hero {
+    min-height:100vh;display:grid;grid-template-columns:1fr 1fr;
+    align-items:center;gap:4rem;
+    padding:8rem 3.5rem 4rem;max-width:1280px;margin:0 auto;
+  }
+  .hero-tag {
+    display:inline-flex;align-items:center;gap:0.5rem;
+    background:var(--rose-light);color:var(--rose-deep);
+    padding:0.35rem 1rem;border-radius:100px;
+    font-size:0.7rem;font-weight:500;letter-spacing:0.04em;
+    margin-bottom:2rem;opacity:0;animation:fadeUp 0.7s 0.1s forwards;
+  }
+  .live-dot { width:6px;height:6px;background:var(--rose-deep);border-radius:50%;animation:pulse 2s infinite; }
+  .hero-title {
+    font-family:'Playfair Display',serif;
+    font-size:clamp(2.8rem,5vw,5rem);font-weight:900;
+    line-height:1.08;letter-spacing:-0.03em;margin-bottom:1.5rem;
+    opacity:0;animation:fadeUp 0.7s 0.25s forwards;
+  }
+  .hero-title em { font-style:italic;color:var(--rose-deep); }
+  .hero-desc {
+    font-size:0.95rem;line-height:1.75;color:var(--text-mid);
+    max-width:460px;margin-bottom:2.5rem;font-weight:300;
+    opacity:0;animation:fadeUp 0.7s 0.4s forwards;
+  }
+  .hero-actions {
+    display:flex;gap:1rem;align-items:center;
+    opacity:0;animation:fadeUp 0.7s 0.55s forwards;
+  }
+  .btn-rose {
+    background:var(--rose-deep);color:white;padding:0.8rem 2rem;
+    border-radius:100px;font-size:0.82rem;font-weight:500;
+    text-decoration:none;transition:all 0.25s;
+    box-shadow:0 4px 20px rgba(232,121,138,0.3);
+  }
+  .btn-rose:hover { transform:translateY(-2px);box-shadow:0 8px 30px rgba(232,121,138,0.45); }
+  .btn-ghost {
+    color:var(--text-mid);font-size:0.82rem;font-weight:500;
+    text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;
+    transition:color 0.2s;
+  }
+  .btn-ghost:hover { color:var(--text); }
+
+  .hero-right {
+    opacity:0;animation:fadeUp 0.8s 0.6s forwards;
+  }
+  .float-card {
+    background:var(--white);border-radius:20px;padding:1.5rem 2rem;
+    box-shadow:var(--shadow-card);margin-bottom:1.2rem;
+    display:flex;align-items:center;gap:1.5rem;
+    animation:cardFloat 6s ease-in-out infinite;
+    transition:transform 0.3s;
+  }
+  .float-card:nth-child(2) { animation-delay:-2s;margin-left:2rem; }
+  .float-card:nth-child(3) { animation-delay:-4s;margin-left:1rem; }
+  @keyframes cardFloat { 0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);} }
+  .fc-icon {
+    width:48px;height:48px;border-radius:14px;
+    display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;
+  }
+  .fc-icon-rose { background:var(--rose-light); }
+  .fc-icon-sage { background:var(--sage-light); }
+  .fc-icon-sky  { background:var(--sky-light); }
+  .fc-num {
+    font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;
+    line-height:1;color:var(--text);
+  }
+  .fc-label { font-size:0.72rem;color:var(--text-soft);margin-top:0.2rem; }
+
+  /* PILLS */
+  .pill-row { display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:3rem; }
+  .pill {
+    border-radius:100px;padding:0.35rem 1rem;font-size:0.72rem;font-weight:500;
+    transition:transform 0.2s;cursor:default;
+  }
+  .pill:hover { transform:translateY(-2px); }
+  .p-rose { background:var(--rose-light);color:var(--rose-deep); }
+  .p-sage { background:var(--sage-light);color:#4a7a43; }
+  .p-sky  { background:var(--sky-light);color:#3a6fa8; }
+  .p-lav  { background:var(--lavender-light);color:#6b52b8; }
+  .p-peach{ background:var(--peach-light);color:#b8762a; }
+
+  /* SECTION */
+  .section { max-width:1280px;margin:0 auto;padding:6rem 3.5rem; }
+  .eyebrow {
+    font-size:0.7rem;font-weight:500;letter-spacing:0.12em;
+    text-transform:uppercase;color:var(--rose-deep);margin-bottom:0.75rem;
+  }
+  .sec-title {
+    font-family:'Playfair Display',serif;font-size:clamp(2rem,3.5vw,3rem);
+    font-weight:700;line-height:1.15;letter-spacing:-0.02em;
+    margin-bottom:1rem;color:var(--text);
+  }
+  .sec-sub {
+    font-size:0.9rem;line-height:1.75;color:var(--text-mid);
+    max-width:520px;margin-bottom:3rem;font-weight:300;
+  }
+
+  /* FEAT GRID */
+  .feat-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem; }
+  .feat-card {
+    background:var(--white);border-radius:20px;padding:2rem;
+    box-shadow:var(--shadow-soft);border:1px solid var(--border);
+    transition:all 0.35s ease;
+  }
+  .feat-card:hover { transform:translateY(-6px);box-shadow:var(--shadow-card); }
+  .feat-icon {
+    width:52px;height:52px;border-radius:16px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.4rem;margin-bottom:1.5rem;
+  }
+  .feat-title { font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;margin-bottom:0.6rem; }
+  .feat-body { font-size:0.78rem;line-height:1.7;color:var(--text-mid);font-weight:300; }
+
+  /* DIVIDER */
+  .sdiv { max-width:1280px;margin:0 auto;padding:0 3.5rem; }
+  .sdiv-line { height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent); }
+
+  /* TICKER */
+  .ticker-wrap { overflow:hidden;background:var(--rose-deep);padding:0.65rem 0; }
+  .ticker-track { display:inline-flex;white-space:nowrap;animation:ticker 35s linear infinite; }
+  .ti {
+    display:inline-flex;align-items:center;gap:1.5rem;padding:0 2.5rem;
+    font-size:0.68rem;font-weight:500;letter-spacing:0.1em;
+    text-transform:uppercase;color:rgba(255,255,255,0.85);
+  }
+  .td { width:4px;height:4px;background:rgba(255,255,255,0.5);border-radius:50%;flex-shrink:0; }
+  @keyframes ticker { from{transform:translateX(0);}to{transform:translateX(-50%);} }
+
+  /* DASHBOARD */
+  .dash-shell {
+    background:var(--white);border-radius:28px;overflow:hidden;
+    box-shadow:var(--shadow-card);border:1px solid var(--border);
+  }
+  .dash-top {
+    background:linear-gradient(135deg,var(--rose-light) 0%,var(--lavender-light) 50%,var(--sky-light) 100%);
+    padding:1.5rem 2.5rem;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--border);
+  }
+  .dash-top-title {
+    font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;
+    color:var(--text);display:flex;align-items:center;gap:0.6rem;
+  }
+  .dash-ctrls { display:flex;gap:0.5rem; }
+  .dc {
+    background:rgba(255,255,255,0.7);border:1px solid var(--border);
+    color:var(--text-mid);padding:0.35rem 1rem;border-radius:100px;
+    font-family:'DM Sans',sans-serif;font-size:0.68rem;font-weight:500;cursor:pointer;
+    transition:all 0.2s;
+  }
+  .dc.active,.dc:hover {
+    background:var(--white);color:var(--rose-deep);
+    border-color:var(--rose);box-shadow:0 2px 12px rgba(232,121,138,0.15);
+  }
+
+  .kpi-row { display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--border); }
+  .kpi-cell {
+    padding:1.75rem 2.5rem;border-right:1px solid var(--border);
+    transition:background 0.25s;
+  }
+  .kpi-cell:last-child { border-right:none; }
+  .kpi-cell:hover { background:var(--cream); }
+  .kpi-lbl { font-size:0.65rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-soft);margin-bottom:0.5rem; }
+  .kpi-val { font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;color:var(--text);line-height:1;margin-bottom:0.4rem; }
+  .kpi-delta { font-size:0.68rem;font-weight:500;display:inline-flex;align-items:center;gap:0.2rem;padding:0.15rem 0.6rem;border-radius:100px; }
+  .d-up { background:var(--sage-light);color:#4a7a43; }
+  .d-dn { background:var(--rose-light);color:var(--rose-deep); }
+
+  .chart-area { display:grid;grid-template-columns:3fr 2fr;border-bottom:1px solid var(--border); }
+  .cpane { padding:2rem 2.5rem; }
+  .cpane+.cpane { border-left:1px solid var(--border); }
+  .cpane-lbl {
+    font-size:0.68rem;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--text-soft);margin-bottom:1.5rem;
+    display:flex;align-items:center;gap:0.5rem;
+  }
+  .cpane-lbl::before { content:'';width:10px;height:10px;border-radius:50%;background:var(--rose);flex-shrink:0; }
+  .cpane-lbl.sage::before { background:var(--sage); }
+  .cpane-lbl.sky::before  { background:var(--sky); }
+  .cpane-lbl.lav::before  { background:var(--lavender); }
+  .cpane-lbl.peach::before{ background:var(--peach); }
+  .ch { height:220px;position:relative; }
+
+  .bot-row { display:grid;grid-template-columns:1fr 1fr 1fr; }
+  .bpane { padding:2rem 2.5rem;border-right:1px solid var(--border); }
+  .bpane:last-child { border-right:none; }
+
+  .prog-list { display:flex;flex-direction:column;gap:1.1rem; }
+  .prog-hd { display:flex;justify-content:space-between;margin-bottom:0.4rem;font-size:0.72rem;color:var(--text-mid);font-weight:500; }
+  .prog-track { height:6px;background:var(--cream);border-radius:100px;overflow:hidden; }
+  .prog-fill { height:100%;border-radius:100px;width:0;transition:width 1.6s cubic-bezier(0.22,1,0.36,1); }
+  .f-rose  { background:linear-gradient(90deg,var(--rose),var(--rose-deep)); }
+  .f-sage  { background:linear-gradient(90deg,var(--sage),#6aab5e); }
+  .f-sky   { background:linear-gradient(90deg,var(--sky),#5599d4); }
+  .f-lav   { background:linear-gradient(90deg,var(--lavender),#8b66d9); }
+  .f-peach { background:linear-gradient(90deg,var(--peach),#e8a060); }
+
+  .dtable { width:100%;border-collapse:collapse; }
+  .dtable th { font-size:0.62rem;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-soft);padding-bottom:0.75rem;border-bottom:1px solid var(--border);text-align:left; }
+  .dtable td { font-size:0.78rem;color:var(--text);padding:0.65rem 0;border-bottom:1px solid var(--border); }
+  .dtable tr:last-child td { border-bottom:none; }
+  .dtable tr:hover td { color:var(--rose-deep); }
+  .tag { display:inline-block;padding:0.15rem 0.6rem;border-radius:100px;font-size:0.6rem;font-weight:500; }
+  .t-rose  { background:var(--rose-light);color:var(--rose-deep); }
+  .t-sage  { background:var(--sage-light);color:#4a7a43; }
+  .t-peach { background:var(--peach-light);color:#b8762a; }
+
+  .donut-wrap { display:flex;flex-direction:column;align-items:center; }
+  .dlegend { display:flex;flex-direction:column;gap:0.6rem;margin-top:1rem;width:100%; }
+  .dl-row { display:flex;align-items:center;justify-content:space-between; }
+  .dl-dot { width:8px;height:8px;border-radius:50%;margin-right:0.5rem;flex-shrink:0; }
+  .dl-lbl { font-size:0.72rem;color:var(--text-mid);display:flex;align-items:center; }
+  .dl-val { font-size:0.72rem;font-weight:500;color:var(--text); }
+
+  /* CODE BLOCK */
+  .code-wrap { background:#1e1b2e;border-radius:20px;overflow:hidden;box-shadow:var(--shadow-card); }
+  .code-top { background:#2a2640;padding:1rem 1.5rem;display:flex;align-items:center;gap:0.5rem; }
+  .cd { width:12px;height:12px;border-radius:50%; }
+  .cd:nth-child(1){background:var(--rose);}
+  .cd:nth-child(2){background:var(--peach);}
+  .cd:nth-child(3){background:var(--sage);}
+  .cfname { font-family:'DM Mono',monospace;font-size:0.7rem;color:#7a7599;margin-left:0.75rem; }
+  pre {
+    padding:2rem;font-family:'DM Mono',monospace;font-size:0.78rem;
+    line-height:1.9;color:#c8c4e0;overflow-x:auto;
+  }
+  .kw  { color:#f4a7b0; }
+  .fn  { color:#a8d8ea; }
+  .str { color:#fde68a; }
+  .cm  { color:#5a5578;font-style:italic; }
+  .num { color:#a8e6cf; }
+
+  /* INSIGHTS */
+  .ins-grid { display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem; }
+  .ins-card {
+    background:var(--white);border-radius:20px;padding:2.5rem;
+    box-shadow:var(--shadow-soft);border:1px solid var(--border);
+    transition:all 0.35s ease;position:relative;overflow:hidden;
+  }
+  .ins-card::before { content:'';position:absolute;top:0;left:0;right:0;height:3px; }
+  .ins-card:nth-child(1)::before { background:linear-gradient(90deg,var(--rose),var(--rose-deep)); }
+  .ins-card:nth-child(2)::before { background:linear-gradient(90deg,var(--sage),#6aab5e); }
+  .ins-card:nth-child(3)::before { background:linear-gradient(90deg,var(--sky),#5599d4); }
+  .ins-card:nth-child(4)::before { background:linear-gradient(90deg,var(--lavender),#8b66d9); }
+  .ins-card:hover { transform:translateY(-5px);box-shadow:var(--shadow-card); }
+  .ins-num { font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text-soft);margin-bottom:1rem; }
+  .ins-title { font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin-bottom:0.75rem; }
+  .ins-body { font-size:0.82rem;line-height:1.75;color:var(--text-mid);font-weight:300; }
+  .ins-big { font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:900;margin-top:1.5rem;line-height:1; }
+  .big-rose{ color:var(--rose-deep); }
+  .big-sage{ color:#5a9a54; }
+  .big-sky { color:#4a82b8; }
+  .big-lav { color:#7a5ec8; }
+
+  /* FOOTER */
+  footer {
+    background:var(--text);color:rgba(255,255,255,0.45);
+    padding:3rem 3.5rem;display:flex;align-items:center;justify-content:space-between;
+  }
+  .f-brand { font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:rgba(255,255,255,0.85); }
+  .f-brand span { color:var(--rose); }
+  .f-links { display:flex;gap:2rem; }
+  .f-links a { color:rgba(255,255,255,0.45);text-decoration:none;font-size:0.75rem;transition:color 0.2s; }
+  .f-links a:hover { color:var(--rose); }
+
+  /* REVEAL */
+  .reveal { opacity:0;transform:translateY(32px);transition:opacity 0.8s ease,transform 0.8s ease; }
+  .reveal.visible { opacity:1;transform:translateY(0); }
+  .rd1 { transition-delay:0.1s; }
+  .rd2 { transition-delay:0.2s; }
+
+  /* FILTER */
+  .filter-row { display:flex;gap:0.5rem;margin-bottom:2rem;flex-wrap:wrap; }
+  .fbtn {
+    background:var(--white);border:1px solid var(--border);color:var(--text-mid);
+    padding:0.4rem 1.1rem;border-radius:100px;
+    font-family:'DM Sans',sans-serif;font-size:0.72rem;font-weight:500;cursor:pointer;
+    transition:all 0.2s;
+  }
+  .fbtn.on,.fbtn:hover {
+    background:var(--rose-deep);border-color:var(--rose-deep);color:white;
+    box-shadow:0 4px 14px rgba(232,121,138,0.3);
+  }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);} }
+  @keyframes pulse  { 0%,100%{opacity:1;}50%{opacity:0.4;} }
+</style>
+</head>
+<body>
+
+<div class="blob-wrap">
+  <div class="blob blob-1"></div><div class="blob blob-2"></div>
+  <div class="blob blob-3"></div><div class="blob blob-4"></div><div class="blob blob-5"></div>
+</div>
+
+<div class="wrap">
+
+<nav id="nav">
+  <a class="nav-logo" href="#">Customer<span> Analysis</span></a>
+  <div class="nav-links">
+    <a href="#overview">Overview</a>
+    <a href="#dashboard">Dashboard</a>
+    <a href="#analysis">Analysis</a>
+    <a href="#insights">Insights</a>
+  </div>
+  <a href="https://github.com/alviyar/customer-behavior-analysis" target="_blank" class="nav-cta">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+    GitHub
+  </a>
+</nav>
+
+<!-- HERO -->
+<div class="hero" id="overview">
+  <div class="hero-left">
+    <div class="hero-tag"><span class="live-dot"></span> Data Analysis · 3,900 Records</div>
+    <h1 class="hero-title">Customer<br><em>Shopping</em><br>Behavior</h1>
+    <p class="hero-desc">End-to-end analytics pipeline uncovering spending patterns, segmentation dynamics, and subscription value — from raw CSV to interactive dashboards.</p>
+    <div class="hero-actions">
+      <a href="#dashboard" class="btn-rose">Explore Dashboard</a>
+      <a href="https://github.com/alviyar/customer-behavior-analysis" target="_blank" class="btn-ghost">View on GitHub →</a>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="float-card">
+      <div class="fc-icon fc-icon-rose">🛍️</div>
+      <div>
+        <div class="fc-num" data-count="3900">0</div>
+        <div class="fc-label">Purchase Records Analyzed</div>
+      </div>
+    </div>
+    <div class="float-card">
+      <div class="fc-icon fc-icon-sage">📊</div>
+      <div>
+        <div class="fc-num" data-count="18">0</div>
+        <div class="fc-label">Feature Dimensions</div>
+      </div>
+    </div>
+    <div class="float-card">
+      <div class="fc-icon fc-icon-sky">⚡</div>
+      <div>
+        <div class="fc-num">Python · SQL · BI</div>
+        <div class="fc-label">Full Analytics Stack</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-track">
+    <div class="ti"><span class="td"></span>Python · Pandas · NumPy<span class="td"></span>PostgreSQL<span class="td"></span>Power BI<span class="td"></span>Customer Segmentation<span class="td"></span>Revenue Analysis<span class="td"></span>Subscription Trends<span class="td"></span>Discount Impact<span class="td"></span>Shipping Analysis<span class="td"></span>Product Performance<span class="td"></span>Feature Engineering</div>
+    <div class="ti"><span class="td"></span>Python · Pandas · NumPy<span class="td"></span>PostgreSQL<span class="td"></span>Power BI<span class="td"></span>Customer Segmentation<span class="td"></span>Revenue Analysis<span class="td"></span>Subscription Trends<span class="td"></span>Discount Impact<span class="td"></span>Shipping Analysis<span class="td"></span>Product Performance<span class="td"></span>Feature Engineering</div>
+  </div>
+</div>
+
+<!-- OVERVIEW -->
+<div class="section" id="overview2">
+  <div class="reveal">
+    <div class="eyebrow">01 · What Was Built</div>
+    <h2 class="sec-title">A complete analytics<br>pipeline, end to end</h2>
+    <p class="sec-sub">From raw data to business insights — cleaning, SQL querying, and interactive visualization across 3,900 customer records.</p>
+    <div class="pill-row">
+      <div class="pill p-rose">Python · Pandas</div>
+      <div class="pill p-sky">PostgreSQL · psycopg2</div>
+      <div class="pill p-lav">Power BI · DAX</div>
+      <div class="pill p-sage">Jupyter Notebook</div>
+      <div class="pill p-peach">Matplotlib · Seaborn</div>
+    </div>
+  </div>
+  <div class="feat-grid reveal rd1">
+    <div class="feat-card">
+      <div class="feat-icon fc-icon-rose">🐍</div>
+      <div class="feat-title">Data Processing</div>
+      <div class="feat-body">Cleaned 3,900 records, standardized column names, imputed 37 missing review ratings using median-by-category, and engineered age_group and frequency features.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon fc-icon-sky">🗄️</div>
+      <div class="feat-title">SQL Analysis</div>
+      <div class="feat-body">Answered 10+ business questions: revenue by gender and age, subscriber spend deltas, high-value discount users, and loyalty segmentation logic.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon" style="background:var(--lavender-light);">📈</div>
+      <div class="feat-title">Power BI Dashboard</div>
+      <div class="feat-body">Multi-page interactive dashboard with custom DAX measures, drill-through pages, and cross-filter visuals for product and segment performance.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon" style="background:var(--peach-light);">🎯</div>
+      <div class="feat-title">Business Outcomes</div>
+      <div class="feat-body">Identified top revenue cohorts, quantified discount effect on spending, evaluated subscription ROI, and produced marketing recommendations.</div>
+    </div>
+  </div>
+</div>
+
+<div class="sdiv"><div class="sdiv-line"></div></div>
+
+<!-- DASHBOARD -->
+<div class="section" id="dashboard">
+  <div class="reveal">
+    <div class="eyebrow">02 · Interactive Dashboard</div>
+    <h2 class="sec-title">Data at a Glance</h2>
+    <p class="sec-sub">Recreated from project findings — explore the key metrics and visualizations.</p>
+    <div class="filter-row" id="filter-row">
+      <button class="fbtn on" data-f="all">All Segments</button>
+      <button class="fbtn" data-f="new">New Customers</button>
+      <button class="fbtn" data-f="returning">Returning</button>
+      <button class="fbtn" data-f="loyal">Loyal</button>
+    </div>
+  </div>
+
+  <div class="dash-shell reveal rd1">
+    <div class="dash-top">
+      <div class="dash-top-title">🌸 Shopping Behavior Overview</div>
+      <div class="dash-ctrls">
+        <button class="dc active" onclick="swChart(this,'revenue')">Revenue</button>
+        <button class="dc" onclick="swChart(this,'products')">Products</button>
+        <button class="dc" onclick="swChart(this,'gender')">Gender</button>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-cell"><div class="kpi-lbl">Total Revenue</div><div class="kpi-val">$571K</div><span class="kpi-delta d-up">↑ 12.4%</span></div>
+      <div class="kpi-cell"><div class="kpi-lbl">Avg Order Value</div><div class="kpi-val">$59.8</div><span class="kpi-delta d-up">↑ 4.1%</span></div>
+      <div class="kpi-cell"><div class="kpi-lbl">Subscriber Rate</div><div class="kpi-val">42%</div><span class="kpi-delta d-up">↑ 2.3%</span></div>
+      <div class="kpi-cell"><div class="kpi-lbl">Discount Users</div><div class="kpi-val">58%</div><span class="kpi-delta d-dn">↓ 1.8%</span></div>
+    </div>
+
+    <div class="chart-area">
+      <div class="cpane">
+        <div class="cpane-lbl">Revenue by Category</div>
+        <div class="ch"><canvas id="c-bar"></canvas></div>
+      </div>
+      <div class="cpane">
+        <div class="cpane-lbl sage">Customer Segments</div>
+        <div class="donut-wrap">
+          <div style="height:160px;width:160px;">
+            <canvas id="c-donut"></canvas>
+          </div>
+          <div class="dlegend">
+            <div class="dl-row"><span class="dl-lbl"><span class="dl-dot" style="background:var(--rose-deep)"></span>New</span><span class="dl-val">35%</span></div>
+            <div class="dl-row"><span class="dl-lbl"><span class="dl-dot" style="background:var(--sky)"></span>Returning</span><span class="dl-val">42%</span></div>
+            <div class="dl-row"><span class="dl-lbl"><span class="dl-dot" style="background:var(--sage)"></span>Loyal</span><span class="dl-val">23%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bot-row">
+      <div class="bpane">
+        <div class="cpane-lbl peach">Top Products by Rating</div>
+        <table class="dtable">
+          <thead><tr><th>Product</th><th>Rating</th><th>Status</th></tr></thead>
+          <tbody id="prod-tb"></tbody>
+        </table>
+      </div>
+      <div class="bpane">
+        <div class="cpane-lbl lav">Spend by Age Group</div>
+        <div class="prog-list" id="age-pl"></div>
+      </div>
+      <div class="bpane">
+        <div class="cpane-lbl sky">Shipping Preference</div>
+        <div class="ch"><canvas id="c-pol"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sdiv"><div class="sdiv-line"></div></div>
+
+<!-- SQL -->
+<div class="section" id="analysis">
+  <div class="reveal">
+    <div class="eyebrow">03 · SQL Analysis</div>
+    <h2 class="sec-title">Business Questions<br>Answered in SQL</h2>
+    <p class="sec-sub">Key queries powering the analysis — segmentation logic, revenue breakdowns, and subscriber comparisons.</p>
+  </div>
+  <div class="code-wrap reveal rd1">
+    <div class="code-top">
+      <div class="cd"></div><div class="cd"></div><div class="cd"></div>
+      <span class="cfname">customer_behavior_project.sql</span>
+    </div>
+    <pre><span class="cm">-- Customer Segmentation: New / Returning / Loyal</span>
+<span class="kw">SELECT</span>
+  customer_id,
+  <span class="fn">COUNT</span>(*) <span class="kw">AS</span> purchase_count,
+  <span class="fn">SUM</span>(purchase_amount_usd) <span class="kw">AS</span> total_spend,
+  <span class="kw">CASE</span>
+    <span class="kw">WHEN</span> <span class="fn">COUNT</span>(*) = <span class="num">1</span>               <span class="kw">THEN</span> <span class="str">'New'</span>
+    <span class="kw">WHEN</span> <span class="fn">COUNT</span>(*) <span class="kw">BETWEEN</span> <span class="num">2</span> <span class="kw">AND</span> <span class="num">4</span>  <span class="kw">THEN</span> <span class="str">'Returning'</span>
+    <span class="kw">ELSE</span>                             <span class="str">'Loyal'</span>
+  <span class="kw">END</span> <span class="kw">AS</span> segment
+<span class="kw">FROM</span> customer_behavior
+<span class="kw">GROUP BY</span> customer_id
+<span class="kw">ORDER BY</span> total_spend <span class="kw">DESC</span>;
+
+<span class="cm">-- Subscriber vs Non-Subscriber Average Spend</span>
+<span class="kw">SELECT</span>
+  subscription_status,
+  <span class="fn">ROUND</span>(<span class="fn">AVG</span>(purchase_amount_usd)::numeric, <span class="num">2</span>) <span class="kw">AS</span> avg_spend,
+  <span class="fn">COUNT</span>(*)                                     <span class="kw">AS</span> customer_count
+<span class="kw">FROM</span> customer_behavior
+<span class="kw">GROUP BY</span> subscription_status;
+
+<span class="cm">-- High-Value Discount Users (top 10%)</span>
+<span class="kw">SELECT</span> customer_id, age, gender, purchase_amount_usd
+<span class="kw">FROM</span>   customer_behavior
+<span class="kw">WHERE</span>  discount_applied = <span class="str">'Yes'</span>
+  <span class="kw">AND</span>  purchase_amount_usd &gt; (
+    <span class="kw">SELECT</span> <span class="fn">PERCENTILE_CONT</span>(<span class="num">0.9</span>)
+           <span class="kw">WITHIN GROUP</span> (<span class="kw">ORDER BY</span> purchase_amount_usd)
+    <span class="kw">FROM</span> customer_behavior
+  )
+<span class="kw">ORDER BY</span> purchase_amount_usd <span class="kw">DESC</span>;</pre>
+  </div>
+</div>
+
+<div class="sdiv"><div class="sdiv-line"></div></div>
+
+<!-- INSIGHTS -->
+<div class="section" id="insights">
+  <div class="reveal">
+    <div class="eyebrow">04 · Key Findings</div>
+    <h2 class="sec-title">Strategic Insights</h2>
+    <p class="sec-sub">Actionable outcomes ready to inform marketing, retention, and loyalty strategy.</p>
+  </div>
+  <div class="ins-grid reveal rd1">
+    <div class="ins-card">
+      <div class="ins-num">01 ·</div>
+      <div class="ins-title">Subscribers Spend More</div>
+      <div class="ins-body">Subscribers consistently outspend non-subscribers across all age groups. Investing in subscription acquisition yields measurable lifetime value improvement.</div>
+      <div class="ins-big big-rose">+23%</div>
+    </div>
+    <div class="ins-card">
+      <div class="ins-num">02 ·</div>
+      <div class="ins-title">Discounts Attract Premium Buyers</div>
+      <div class="ins-body">Top 10% spenders skew heavily toward discount users — discounting attracts high-value buyers who spend more in aggregate.</div>
+      <div class="ins-big big-sage">Top 10%</div>
+    </div>
+    <div class="ins-card">
+      <div class="ins-num">03 ·</div>
+      <div class="ins-title">45–54 Age Group Leads Revenue</div>
+      <div class="ins-body">Middle-aged customers have the highest average order value and purchase frequency — targeted campaigns offer the best ROI on marketing spend.</div>
+      <div class="ins-big big-sky">$74 AOV</div>
+    </div>
+    <div class="ins-card">
+      <div class="ins-num">04 ·</div>
+      <div class="ins-title">Free Shipping Drives Volume</div>
+      <div class="ins-body">Free shipping orders are 38% of transactions but generate 42% of total revenue — basket sizes rise when shipping friction is removed.</div>
+      <div class="ins-big big-lav">+4pp Rev</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="f-brand">Customer<span> Behavior</span> Analysis</div>
+  <div class="f-links">
+    <a href="https://github.com/alviyar/customer-behavior-analysis" target="_blank">GitHub Repo</a>
+    <a href="https://github.com/alviyar/customer-behavior-analysis/blob/main/customer_behavior_project.ipynb" target="_blank">Notebook</a>
+    <a href="https://github.com/alviyar/customer-behavior-analysis/blob/main/Customer%20Shopping%20Behavior%20Analysis.pdf" target="_blank">Report PDF</a>
+  </div>
+</footer>
+
+</div>
+
+<script>
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 30);
+});
+
+// COUNT UP
+function countUp(el, target) {
+  let v = 0, step = target / 80;
+  const t = setInterval(() => {
+    v = Math.min(v + step, target);
+    el.textContent = Math.floor(v).toLocaleString();
+    if (v >= target) clearInterval(t);
+  }, 16);
+}
+document.querySelectorAll('[data-count]').forEach(el => countUp(el, +el.dataset.count));
+
+// CHARTS
+Chart.defaults.color = '#a09cac';
+Chart.defaults.borderColor = 'rgba(45,42,53,0.07)';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.font.size = 10;
+
+const ROSE_D = 'rgba(232,121,138,0.82)';
+const SAGE   = 'rgba(168,197,160,0.82)';
+const SKY    = 'rgba(168,200,232,0.82)';
+const LAV    = 'rgba(196,181,232,0.82)';
+const PEACH  = 'rgba(245,201,160,0.82)';
+const ROSE   = 'rgba(244,167,176,0.82)';
+
+// BAR
+const barCtx = document.getElementById('c-bar').getContext('2d');
+const barChart = new Chart(barCtx, {
+  type: 'bar',
+  data: {
+    labels: ['Clothing','Footwear','Outerwear','Accessories','Bags','Jewelry'],
+    datasets: [{ data:[142000,118000,98000,87000,73000,53000], backgroundColor:[ROSE_D,SKY,SAGE,LAV,PEACH,ROSE], borderWidth:0, borderRadius:8, borderSkipped:false }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins: { legend:{ display:false } },
+    scales: {
+      x: { grid:{ display:false } },
+      y: { grid:{ color:'rgba(45,42,53,0.05)' }, ticks:{ callback: v => '$'+(v/1000)+'k' } }
+    },
+    animation: { duration:1200, easing:'easeOutQuart' }
+  }
+});
+
+// DONUT
+const donutCtx = document.getElementById('c-donut').getContext('2d');
+const donutChart = new Chart(donutCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['New','Returning','Loyal'],
+    datasets: [{ data:[35,42,23], backgroundColor:[ROSE_D, SKY, SAGE], borderWidth:0, hoverOffset:6 }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false, cutout:'68%',
+    plugins: { legend:{ display:false } },
+    animation: { duration:1200 }
+  }
+});
+
+// POLAR
+new Chart(document.getElementById('c-pol').getContext('2d'), {
+  type: 'polarArea',
+  data: {
+    labels: ['Free Ship','Standard','Express','Next Day','2-Day','Pickup'],
+    datasets: [{ data:[38,22,16,12,8,4], backgroundColor:[ROSE_D,SKY,SAGE,LAV,PEACH,ROSE], borderWidth:0 }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins: { legend:{ position:'right', labels:{ boxWidth:8, padding:10 } } },
+    scales: { r: { grid:{ color:'rgba(45,42,53,0.05)' }, ticks:{ display:false } } },
+    animation: { duration:1200 }
+  }
+});
+
+// PRODUCT TABLE
+[['Blouse','4.8 ★','t-rose','Top Pick'],['Jacket','4.7 ★','t-sage','Trending'],
+ ['Boots','4.6 ★','t-rose','Top Pick'],['Sneakers','4.5 ★','t-peach','Stable'],
+ ['Dress','4.4 ★','t-sage','Rising']].forEach(([n,r,c,l]) => {
+  document.getElementById('prod-tb').innerHTML += `<tr><td>${n}</td><td>${r}</td><td><span class="tag ${c}">${l}</span></td></tr>`;
+});
+
+// AGE BARS
+[['18–24',62,'f-sky'],['25–34',78,'f-sage'],['35–44',85,'f-lav'],
+ ['45–54',100,'f-rose'],['55–64',73,'f-peach'],['65+',54,'f-sky']].forEach(([l,v,c]) => {
+  document.getElementById('age-pl').innerHTML += `<div><div class="prog-hd"><span>${l}</span><span>${v}%</span></div><div class="prog-track"><div class="prog-fill ${c}" data-w="${v}"></div></div></div>`;
+});
+
+// FILTER
+document.getElementById('filter-row').addEventListener('click', e => {
+  const b = e.target.closest('.fbtn'); if (!b) return;
+  document.querySelectorAll('.fbtn').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  const s = { all:[35,42,23], new:[75,18,7], returning:[20,68,12], loyal:[8,28,64] };
+  donutChart.data.datasets[0].data = s[b.dataset.f];
+  donutChart.update();
+});
+
+// SWITCH CHART
+const views = {
+  revenue: { labels:['Clothing','Footwear','Outerwear','Accessories','Bags','Jewelry'], data:[142000,118000,98000,87000,73000,53000] },
+  products:{ labels:['Blouse','Jacket','Boots','Sneakers','Dress','Handbag'], data:[980,870,760,710,660,540] },
+  gender:  { labels:['F 18-34','F 35-54','M 18-34','M 35-54','F 55+','M 55+'], data:[165000,148000,122000,105000,78000,53000] }
+};
+function swChart(btn, v) {
+  document.querySelectorAll('.dc').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  barChart.data.labels = views[v].labels;
+  barChart.data.datasets[0].data = views[v].data;
+  barChart.update();
+}
+
+// SCROLL REVEAL
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      e.target.querySelectorAll('.prog-fill[data-w]').forEach(b => {
+        setTimeout(() => { b.style.width = b.dataset.w + '%'; }, 350);
+      });
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+// Also trigger bars when the dashboard panel scrolls in
+const dashEl = document.querySelector('.dash-shell');
+if (dashEl) {
+  new IntersectionObserver(([e]) => {
+    if (e.isIntersecting) {
+      document.querySelectorAll('.prog-fill[data-w]').forEach(b => {
+        setTimeout(() => { b.style.width = b.dataset.w + '%'; }, 450);
+      });
+    }
+  }, { threshold: 0.2 }).observe(dashEl);
+}
+</script>
+</body>
+</html>
